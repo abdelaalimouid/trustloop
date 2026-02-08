@@ -96,14 +96,6 @@ trustloop/
 
 ---
 
-## Documentation
-
-- **`docs/HOW_TO_USE.md`** — Demo flow (Select → Analyze → Publish).
-- **`docs/JUDGE_GUIDE.md`** — What each UI element is and how to evaluate.
-- **`docs/COMPLIANCE_AUDIT.md`** — Alignment with the RealPage brief and innovation list.
-
----
-
 ## License
 
 MIT.
