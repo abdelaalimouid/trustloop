@@ -560,6 +560,7 @@ export default function TrustLoopDashboard({
                   <Zap className="h-4 w-4" />
                   {suggesting ? "Generating…" : "Suggest with AI (Gemini)"}
                 </button>
+                <p className="text-[10px] text-zinc-600">2 tickets · ~20–40 s</p>
                 {suggestions.length > 0 && (
                   <div className="space-y-1.5">
                     <p className="text-[10px] text-zinc-500">Use one:</p>
@@ -699,6 +700,7 @@ export default function TrustLoopDashboard({
                 <span className="text-[10px] text-zinc-500" title="Per doc: Support Transcripts / Speech-to-Text">
                   Simulated call (transcript → speech)
                 </span>
+                <span className="text-[10px] text-zinc-600">Analysis usually 15–30 s</span>
               </div>
               {(analyzing || processingSteps.some((s) => s.status !== "pending")) && (
                 <motion.div

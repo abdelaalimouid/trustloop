@@ -48,13 +48,13 @@ export async function suggestTickets(
     return { suggestions: [], error: "API key not configured" };
   }
 
-  const prompt = `You are generating synthetic support tickets for a property management / RealPage-style support system. Each ticket MUST include a conversation transcript in the same format as the dataset: Agent/Caller dialogue with realistic back-and-forth (greeting, issue description, troubleshooting steps, resolution, closing). Use "Agent:" and "Caller:" prefixes; Agent represents ExampleCo Support; Caller gives their name, property, and issue. Keep each transcript to 8–14 exchanges. Match the tone and structure of this example:
+  const prompt = `You are generating synthetic support tickets for a property management / RealPage-style support system. Each ticket MUST include a conversation transcript in the same format as the dataset: Agent/Caller dialogue with realistic back-and-forth (greeting, issue description, troubleshooting steps, resolution, closing). Use "Agent:" and "Caller:" prefixes; Agent represents ExampleCo Support; Caller gives their name, property, and issue. Keep each transcript to 6–10 exchanges. Match the tone and structure of this example:
 
 ---
 ${TRANSCRIPT_EXAMPLE}
 ---
 
-Generate exactly 3 different ticket suggestions. Each ticket must have:
+Generate exactly 2 different ticket suggestions. Each ticket must have:
 - Subject: short one-line summary
 - Description: 1–2 sentence summary (for display in queue)
 - Priority: High, Medium, or Low
@@ -73,7 +73,7 @@ User prompt or description: ${userPrompt.slice(0, 500)}`;
     const text = result.response.text()?.trim() ?? "";
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     const arr = jsonMatch ? parseJsonSafe<Record<string, unknown>[]>(jsonMatch[0]) : [];
-    const suggestions = (Array.isArray(arr) ? arr : []).slice(0, 3).map((t) => ({
+    const suggestions = (Array.isArray(arr) ? arr : []).slice(0, 2).map((t) => ({
       Subject: String(t.Subject ?? t.subject ?? "No subject"),
       Description: String(t.Description ?? t.description ?? ""),
       Priority: String(t.Priority ?? t.priority ?? "Medium"),

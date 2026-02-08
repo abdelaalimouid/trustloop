@@ -69,8 +69,8 @@ export async function analyzeTicket(
   const ticket = getTicketById(ticketId);
   const issueText = transcript || ticket?.Description || ticket?.Subject || "No description provided.";
   const searchTerms = extractSearchTerms(issueText);
-  const relevantArticles = searchKnowledgeArticles(searchTerms, 8);
-  const relevantScripts = searchScripts(searchTerms, 5);
+  const relevantArticles = searchKnowledgeArticles(searchTerms, 6);
+  const relevantScripts = searchScripts(searchTerms, 3);
 
   const contextParts: string[] = [];
 
@@ -80,7 +80,7 @@ export async function analyzeTicket(
         learnedArticles
           .map(
             (a) =>
-              `[${a.id} from Ticket ${a.ticketId}] ${a.title}\n${(a.body ?? "").slice(0, 2000)}`
+              `[${a.id} from Ticket ${a.ticketId}] ${a.title}\n${(a.body ?? "").slice(0, 1200)}`
           )
           .join("\n\n---\n\n")
     );
@@ -93,7 +93,7 @@ export async function analyzeTicket(
         relevantArticles
           .map(
             (a) =>
-              `[${a.KB_Article_ID}] ${a.Title || ""}\n${(a.Body || "").slice(0, 2000)}`
+              `[${a.KB_Article_ID}] ${a.Title || ""}\n${(a.Body || "").slice(0, 1200)}`
           )
           .join("\n\n---\n\n")
     );
@@ -163,14 +163,32 @@ ${issueText}
 
     const solution = parsed.solution ?? "No solution generated.";
     let compliance_status: "SAFE" | "UNSAFE" | "UNKNOWN" = "UNKNOWN";
+    const qaPromptShort = getQAEvaluationPromptText(2000);
+    let qa_score: number | null = null;
+    let red_flags: string[] = [];
+    let coaching_tip: string | null = null;
+
     try {
-      const complianceRes = await model.generateContent(
-        `Does this support response contain PII, full payment details, or unsafe/harmful instructions? Reply with exactly one word: SAFE or UNSAFE.\n\nResponse:\n${solution.slice(0, 1500)}`
-      );
+      const [complianceRes, qaRes] = await Promise.all([
+        model.generateContent(
+          `Does this support response contain PII, full payment details, or unsafe/harmful instructions? Reply with exactly one word: SAFE or UNSAFE.\n\nResponse:\n${solution.slice(0, 1200)}`
+        ),
+        model.generateContent(
+          `You are a QA analyst. Score this support resolution (0-100) and give one short coaching tip. If PII/PCI/unsafe set red_flags and qa_score 0. Otherwise score clarity.\n\n${qaPromptShort.slice(0, 1200)}\n\nResolution:\n${solution.slice(0, 1000)}\n\nReply JSON only: {"qa_score":<0-100>,"red_flags":[] or ["issue"],"coaching_tip":"one sentence"}`
+        ),
+      ]);
       const complianceText = complianceRes.response.text()?.trim()?.toUpperCase() ?? "";
       compliance_status = complianceText.includes("UNSAFE") ? "UNSAFE" : "SAFE";
+      const qaText = qaRes.response.text()?.trim() ?? "";
+      const qaMatch = qaText.match(/\{[\s\S]*\}/);
+      if (qaMatch) {
+        const qaParsed = parseJsonSafe<{ qa_score?: number; red_flags?: string[]; coaching_tip?: string }>(qaMatch[0]);
+        qa_score = typeof qaParsed.qa_score === "number" ? Math.max(0, Math.min(100, qaParsed.qa_score)) : null;
+        red_flags = Array.isArray(qaParsed.red_flags) ? qaParsed.red_flags.filter((x) => typeof x === "string") : [];
+        coaching_tip = typeof qaParsed.coaching_tip === "string" && qaParsed.coaching_tip.trim() ? qaParsed.coaching_tip.trim() : null;
+      }
     } catch {
-      compliance_status = "UNKNOWN";
+      /* compliance/QA optional */
     }
 
     let recommended_resource: RecommendedResource | null = null;
@@ -181,26 +199,6 @@ ${issueText}
         id: String(rr.id),
         title: rr.title ? String(rr.title).slice(0, 120) : undefined,
       };
-    }
-
-    const qaPromptShort = getQAEvaluationPromptText(2500);
-    let qa_score: number | null = null;
-    let red_flags: string[] = [];
-    let coaching_tip: string | null = null;
-    try {
-      const qaRes = await model.generateContent(
-        `You are a QA analyst. Score this support resolution (0-100) and give one short coaching tip. Rules: If the response contains PII, PCI data, or unsafe guidance, set red_flags to a list of issues and qa_score to 0. Otherwise score clarity and correctness.\n\n${qaPromptShort.slice(0, 1500)}\n\n---\nResolution to score:\n${solution.slice(0, 1200)}\n\nReply JSON only: {"qa_score":<0-100>,"red_flags":["issue1"] or [],"coaching_tip":"one short sentence"}`,
-      );
-      const qaText = qaRes.response.text()?.trim() ?? "";
-      const qaMatch = qaText.match(/\{[\s\S]*\}/);
-      if (qaMatch) {
-        const qaParsed = parseJsonSafe<{ qa_score?: number; red_flags?: string[]; coaching_tip?: string }>(qaMatch[0]);
-        qa_score = typeof qaParsed.qa_score === "number" ? Math.max(0, Math.min(100, qaParsed.qa_score)) : null;
-        red_flags = Array.isArray(qaParsed.red_flags) ? qaParsed.red_flags.filter((x) => typeof x === "string") : [];
-        coaching_tip = typeof qaParsed.coaching_tip === "string" && qaParsed.coaching_tip.trim() ? qaParsed.coaching_tip.trim() : null;
-      }
-    } catch {
-      /* QA optional */
     }
 
     return {
