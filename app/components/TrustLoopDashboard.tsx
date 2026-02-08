@@ -147,9 +147,9 @@ export default function TrustLoopDashboard({
 
   const displayTranscript = selectedTicket
     ? (selectedTicket as TicketWithTranscript).transcript ||
-      selectedTicket.Description ||
-      selectedTicket.Subject ||
-      ""
+    selectedTicket.Description ||
+    selectedTicket.Subject ||
+    ""
     : "";
 
   const displaySummary = (t: TicketRow) =>

@@ -13,12 +13,16 @@ export default function Home() {
   const knowledgeBaseCount = loadKnowledgeArticles().length;
   const learningEventsFromDataset = loadLearningEvents().slice(0, 20);
   const kbLineageFromDataset = loadKBLineage().slice(0, 15);
+  // Serialize to plain objects so Server → Client props are safe (no Date/class instances from xlsx)
+  const ticketsPlain = JSON.parse(JSON.stringify(tickets)) as typeof tickets;
+  const learningPlain = JSON.parse(JSON.stringify(learningEventsFromDataset));
+  const lineagePlain = JSON.parse(JSON.stringify(kbLineageFromDataset));
   return (
     <TrustLoopDashboard
-      tickets={tickets}
+      tickets={ticketsPlain}
       initialKnowledgeBaseCount={knowledgeBaseCount}
-      learningEventsFromDataset={learningEventsFromDataset}
-      kbLineageFromDataset={kbLineageFromDataset}
+      learningEventsFromDataset={learningPlain}
+      kbLineageFromDataset={lineagePlain}
     />
   );
 }
