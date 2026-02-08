@@ -220,7 +220,7 @@ export default function TrustLoopDashboard({
       ]);
     }
     setAnalyzing(false);
-  }, [selectedTicket, publishedArticles]);
+  }, [selectedTicket, publishedArticles, setNewKnowledgeDraft, setLearningLog, setAnalysis, setProcessingSteps, setAgentLog, setUsageCount, setAnalyzing]);
 
   const playCall = useCallback(async () => {
     if (!selectedTicket) return;
@@ -274,7 +274,7 @@ export default function TrustLoopDashboard({
         onCallEnd();
       }, 6000);
     }
-  }, [selectedTicket, runTranscriptSimulation, stopCall, onCallEnd]);
+  }, [selectedTicket, runTranscriptSimulation, stopCall, onCallEnd, setAnalysis, setNewKnowledgeDraft, setTranscriptFull, setTranscriptVisibleLength]);
 
   useEffect(() => {
     return () => {
@@ -315,7 +315,7 @@ export default function TrustLoopDashboard({
     setNewKnowledgeDraft(null);
     setJustPublishedId(kbId);
     setTimeout(() => setJustPublishedId(null), 3000);
-  }, [newKnowledgeDraft, selectedTicket]);
+  }, [newKnowledgeDraft, selectedTicket, setPublishedArticles, setLearningLog, setSessionLineage, setNewKnowledgeDraft, setJustPublishedId]);
 
   const copySolution = useCallback(() => {
     if (!analysis?.solution) return;
@@ -389,7 +389,7 @@ export default function TrustLoopDashboard({
       ]);
     }
     setAnalyzing(false);
-  }, [selectedTicket, publishedArticles]);
+  }, [selectedTicket, publishedArticles, setAnalyzing, setAnalysis, setNewKnowledgeDraft, setProcessingSteps, setAgentLog, setUsageCount, setLearningLog]);
 
   const getPriorityStyle = (priority: string | undefined) => {
     const p = (priority ?? "").toLowerCase();
