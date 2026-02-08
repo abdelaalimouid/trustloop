@@ -76,6 +76,17 @@ const PROCESSING_STEPS = [
   { id: "4", label: "Checking compliance" },
 ];
 
+/** Demo ticket: analyze to see Compliance Blocked (UNSAFE) and red flags. */
+const DEMO_UNSAFE_TICKET: TicketWithTranscript = {
+  Ticket_Number: "DEMO-UNSAFE",
+  Subject: "Compliance demo — unsafe response",
+  Description: "Demonstrates the compliance guardrail. Click Analyze now to see a response that contains PII (SSN, card number) and is correctly blocked.",
+  Priority: "High",
+  Category: "Compliance",
+  transcript:
+    "Caller: Can you confirm the resident's SSN and card on file?\nAgent: (Demo) This ticket shows how the system blocks responses that include PII or full payment details.",
+};
+
 type DatasetLearningEvent = { Event_ID?: string; Trigger_Ticket_Number?: string; Proposed_KB_Article_ID?: string; Draft_Summary?: string; Final_Status?: string };
 type DatasetKBLineage = { KB_Article_ID?: string; Source_Type?: string; Source_ID?: string; Evidence_Snippet?: string };
 
@@ -420,7 +431,7 @@ export default function TrustLoopDashboard({
   const currentStep = analysis ? (newKnowledgeDraft ? 3 : 2) : selectedTicket ? 2 : 1;
 
   const allTickets = useMemo<TicketWithTranscript[]>(
-    () => [...customTickets, ...tickets],
+    () => [DEMO_UNSAFE_TICKET, ...customTickets, ...tickets],
     [customTickets, tickets]
   );
 

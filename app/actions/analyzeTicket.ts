@@ -66,6 +66,38 @@ export async function analyzeTicket(
     };
   }
 
+  // Demo ticket: show Compliance Blocked (UNSAFE) when response contains PII
+  if (ticketId === "DEMO-UNSAFE") {
+    const unsafeSolution =
+      "For verification purposes, please confirm the resident's SSN is 123-45-6789 and their card on file ends in 4111. Do not share this full card number 4111-1111-1111-1111 over the phone.";
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    let compliance_status: "SAFE" | "UNSAFE" | "UNKNOWN" = "UNKNOWN";
+    let qa_score: number | null = 0;
+    let red_flags: string[] = ["PII: SSN and full card number in response"];
+    let coaching_tip: string | null = "Never include SSN or full payment card numbers in support responses.";
+    try {
+      const complianceRes = await model.generateContent(
+        `Does this support response contain PII, full payment details, or unsafe/harmful instructions? Reply with exactly one word: SAFE or UNSAFE.\n\nResponse:\n${unsafeSolution}`
+      );
+      const complianceText = complianceRes.response.text()?.trim()?.toUpperCase() ?? "";
+      compliance_status = complianceText.includes("UNSAFE") ? "UNSAFE" : "SAFE";
+    } catch {
+      compliance_status = "UNSAFE";
+    }
+    return {
+      solution: unsafeSolution,
+      confidence_score: 0.3,
+      new_knowledge_draft: null,
+      compliance_status,
+      sources_used: [],
+      recommended_resource: null,
+      qa_score,
+      red_flags,
+      coaching_tip,
+    };
+  }
+
   const ticket = getTicketById(ticketId);
   const issueText = transcript || ticket?.Description || ticket?.Subject || "No description provided.";
   const searchTerms = extractSearchTerms(issueText);
@@ -77,12 +109,12 @@ export async function analyzeTicket(
   if (learnedArticles.length > 0) {
     contextParts.push(
       "## Previously learned articles (from this system; include these in the knowledge base):\n" +
-        learnedArticles
-          .map(
-            (a) =>
-              `[${a.id} from Ticket ${a.ticketId}] ${a.title}\n${(a.body ?? "").slice(0, 1200)}`
-          )
-          .join("\n\n---\n\n")
+      learnedArticles
+        .map(
+          (a) =>
+            `[${a.id} from Ticket ${a.ticketId}] ${a.title}\n${(a.body ?? "").slice(0, 1200)}`
+        )
+        .join("\n\n---\n\n")
     );
   }
 
@@ -90,12 +122,12 @@ export async function analyzeTicket(
   if (relevantArticles.length > 0) {
     contextParts.push(
       "## Seed knowledge base:\n" +
-        relevantArticles
-          .map(
-            (a) =>
-              `[${a.KB_Article_ID}] ${a.Title || ""}\n${(a.Body || "").slice(0, 1200)}`
-          )
-          .join("\n\n---\n\n")
+      relevantArticles
+        .map(
+          (a) =>
+            `[${a.KB_Article_ID}] ${a.Title || ""}\n${(a.Body || "").slice(0, 1200)}`
+        )
+        .join("\n\n---\n\n")
     );
   } else {
     const all = loadKnowledgeArticles();
@@ -171,7 +203,9 @@ ${issueText}
     try {
       const [complianceRes, qaRes] = await Promise.all([
         model.generateContent(
-          `Does this support response contain PII, full payment details, or unsafe/harmful instructions? Reply with exactly one word: SAFE or UNSAFE.\n\nResponse:\n${solution.slice(0, 1200)}`
+          `You are a compliance checker for support responses. Reply with exactly one word: SAFE or UNSAFE.
+UNSAFE only if the response contains: full SSN/card numbers, passwords, or instructions that could cause real harm. 
+SAFE if it only mentions: resident/customer context, amounts (e.g. $150), fees, waivers, balances, ledger steps, or normal property-management guidance. Be conservative: when in doubt reply SAFE.\n\nResponse:\n${solution.slice(0, 1200)}`
         ),
         model.generateContent(
           `You are a QA analyst. Score this support resolution (0-100) and give one short coaching tip. If PII/PCI/unsafe set red_flags and qa_score 0. Otherwise score clarity.\n\n${qaPromptShort.slice(0, 1200)}\n\nResolution:\n${solution.slice(0, 1000)}\n\nReply JSON only: {"qa_score":<0-100>,"red_flags":[] or ["issue"],"coaching_tip":"one sentence"}`
